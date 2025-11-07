@@ -1,8 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using InmobiliariaAPI.Models;
+using InmobiliariaAPI.DTO;
+using InmobiliariaAPI.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -23,17 +24,24 @@ namespace InmobiliariaAPI
         }
 
         [HttpGet]
-        public IActionResult GetPropietarios()
+        public async Task<IActionResult> Perfil()
         {
-            int idPropietario = int.Parse(User.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value);
-            var propietarios = context.Propietarios.Where(x => x.IdPropietario == idPropietario).FirstOrDefault();
-            return Ok(propietarios);
+            int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+            var propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+            if (propietario == null) return NotFound("No se encontró el propietario");
+            return Ok(propietario);
         }
 
-        [HttpPut("actualizar")]
-        public IActionResult Actualizar([FromBody] Propietario propietario)
+        [HttpPut]
+        public async Task<IActionResult> Actualizar([FromBody] Propietario propietario)
         {
-            Propietario propietarioOriginal = context.Propietarios.Where(x => x.IdPropietario == propietario.IdPropietario).FirstOrDefault();
+            int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+
+            if (propietario.IdPropietario != idPropietario)
+                return StatusCode(403, "Solo puede editar su perfil");
+
+            var propietarioOriginal = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+            if (propietarioOriginal == null) return BadRequest("No se encontró el propietario");
             if (propietario.Clave == null)
             {
                 propietario.Clave = propietarioOriginal.Clave;
@@ -41,12 +49,7 @@ namespace InmobiliariaAPI
             else
             {
 
-                string hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-                    password: propietario.Clave,
-                    salt: System.Text.Encoding.ASCII.GetBytes(configuration["Salt"] ?? ""),
-                    prf: KeyDerivationPrf.HMACSHA1,
-                    iterationCount: 1000,
-                    numBytesRequested: 256 / 8));
+                string hashed = HashService.HashClave(configuration["Salt"] ?? "", propietario.Clave);
                 propietario.Clave = hashed;
             }
             context.Entry(propietarioOriginal).CurrentValues.SetValues(propietario);
@@ -54,34 +57,34 @@ namespace InmobiliariaAPI
             return Ok(propietario);
         }
 
-        [HttpPost("reset")]
+        [HttpPatch("clave")]
         [AllowAnonymous]
-        public IActionResult Reset([FromForm] LoginDTO loginDTO)
+        public async Task<IActionResult> CambiarClave([FromForm] CambiarClaveRequest cambiarClave)
         {
 
-            string hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-                password: loginDTO.Clave,
-                salt: System.Text.Encoding.ASCII.GetBytes(configuration["Salt"] ?? ""),
-                prf: KeyDerivationPrf.HMACSHA1,
-                iterationCount: 1000,
-                numBytesRequested: 256 / 8));
-            context.Propietarios.Where(x => x.Email == loginDTO.Usuario).FirstOrDefault().Clave = hashed;
-            context.SaveChanges();
+            int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+            string nuevaHashed = HashService.HashClave(configuration["Salt"] ?? "", cambiarClave.Nueva);
+            string viejaHashed = HashService.HashClave(configuration["Salt"] ?? "", cambiarClave.Actual);
+
+            Propietario? propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+
+            if (propietario == null) return NotFound("No se encontró el propietario");
+
+            if (viejaHashed != propietario.Clave) return BadRequest("Clave actual incorrecta");
+            propietario.Clave = nuevaHashed;
+
+            await context.SaveChangesAsync();
+
             return Ok();
         }
         [HttpPost("login")]
         [AllowAnonymous]
-        public async Task<IActionResult> Login([FromForm] LoginDTO loginDTO)
+        public async Task<IActionResult> Login([FromForm] LoginRequest login)
         {
             try
             {
-                string hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-                    password: loginDTO.Clave,
-                    salt: System.Text.Encoding.ASCII.GetBytes(configuration["Salt"] ?? ""),
-                    prf: KeyDerivationPrf.HMACSHA1,
-                    iterationCount: 1000,
-                    numBytesRequested: 256 / 8));
-                var p = await context.Propietarios.FirstOrDefaultAsync(x => x.Email == loginDTO.Usuario);
+                string hashed = HashService.HashClave(configuration["Salt"] ?? "", login.Clave);
+                var p = await context.Propietarios.FirstOrDefaultAsync(x => x.Email == login.Usuario && x.Estado == true);
                 if (p == null || p.Clave != hashed)
                 {
                     return BadRequest("Nombre de usuario o clave incorrecta");
@@ -95,8 +98,7 @@ namespace InmobiliariaAPI
                     var credenciales = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
                     var claims = new List<Claim>
                     {
-                        new Claim(ClaimTypes.Name, p.Email),
-                        new Claim(ClaimTypes.NameIdentifier, p.IdPropietario.ToString()),
+                        new Claim(ClaimTypes.Name, p.IdPropietario.ToString()),
                         new Claim("FullName", p.Nombre + " " + p.Apellido),
                         new Claim(ClaimTypes.Role, "Propietario"),
                     };

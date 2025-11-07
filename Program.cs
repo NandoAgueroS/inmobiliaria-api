@@ -9,6 +9,9 @@ var configuration = builder.Configuration;
 builder.WebHost.ConfigureKestrel(
     serverOptions => serverOptions.ListenAnyIP(5199)
     );
+builder.Services.AddRouting(
+    options => options.LowercaseUrls = true
+    );
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -33,16 +36,21 @@ builder.Services.AddDbContext<DataContext>(
         connection, ServerVersion.AutoDetect(connection)
     )
 );
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
-
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

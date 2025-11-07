@@ -1,11 +1,13 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InmobiliariaAPI.Models
 {
 
     public class Pago
     {
-        public int? Id { get; set; }
+        [Key]
+        public int? IdPago { get; set; }
 
         [Required(ErrorMessage = "Numero de pago es un campo obligatorio")]
         public string NumeroPago { get; set; }
@@ -22,6 +24,7 @@ namespace InmobiliariaAPI.Models
         [Required(ErrorMessage = "El Contrato es un campo obligatorio")]
         public int IdContrato { get; set; }
 
+        [ForeignKey("IdContrato")]
         public Contrato? Contrato { get; set; }
 
         [DataType(DataType.Date)]

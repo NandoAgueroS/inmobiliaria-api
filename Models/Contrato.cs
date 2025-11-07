@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InmobiliariaAPI.Models
 {
     public class Contrato
     {
-        public int? Id { get; set; }
+        [Key]
+        public int? IdContrato { get; set; }
 
         [Required(ErrorMessage = "El inquilino es obligatorio")]
         public int IdInquilino { get; set; }
@@ -12,8 +14,10 @@ namespace InmobiliariaAPI.Models
         [Required(ErrorMessage = "El inmueble es obligatorio")]
         public int IdInmueble { get; set; }
 
+        [ForeignKey("IdInquilino")]
         public Inquilino? Inquilino { get; set; }
 
+        [ForeignKey("IdInmueble")]
         public Inmueble? Inmueble { get; set; }
         [Required(ErrorMessage = "El monto es obligatorio")]
         public decimal Monto { get; set; }

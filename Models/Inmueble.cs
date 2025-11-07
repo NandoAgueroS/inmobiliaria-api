@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using InmobiliariaAPI.DTO;
 
 namespace InmobiliariaAPI.Models
 {
@@ -10,9 +11,9 @@ namespace InmobiliariaAPI.Models
         [Key]
         public int? IdInmueble { get; set; }
 
-        public string? Direccion { get; set; }
+        public string Direccion { get; set; }
 
-        public string? Uso { get; set; }
+        public string Uso { get; set; }
 
         public int IdTipo { get; set; }
 
@@ -25,26 +26,35 @@ namespace InmobiliariaAPI.Models
 
         public decimal Valor { get; set; }
 
-        public string? Imagen { get; set; }
+        public string? Imagen { get; set; } = "";
 
-        public double Latitud { get; set; }
+        public decimal Latitud { get; set; }
 
-        public double Longitud { get; set; }
+        public decimal Longitud { get; set; }
 
-        [ForeignKey("IdPropietario")]
         public int IdPropietario { get; set; }
 
         [ForeignKey("IdPropietario")]
         public Propietario? Propietario { get; set; }
 
-        public bool Disponible { get; set; }
+        public bool? Disponible { get; set; } = false;
 
-        public bool TieneContratoVigente { get; set; }
+        public bool? Estado { get; set; } = true;
 
-        public bool Estado { get; set; }
+        public Inmueble() { }
 
+        public Inmueble(InmuebleImagenRequest inmuebleImagenRequest, int idPropietario)
+        {
 
-
-
+            Direccion = inmuebleImagenRequest.Direccion;
+            Uso = inmuebleImagenRequest.Uso;
+            IdTipo = inmuebleImagenRequest.IdTipo.Value;
+            Ambientes = inmuebleImagenRequest.Ambientes.Value;
+            Superficie = inmuebleImagenRequest.Superficie.Value;
+            Valor = inmuebleImagenRequest.Valor.Value;
+            Latitud = inmuebleImagenRequest.Latitud.Value;
+            Longitud = inmuebleImagenRequest.Longitud.Value;
+            IdPropietario = idPropietario;
+        }
     }
 }
