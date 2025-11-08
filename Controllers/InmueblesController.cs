@@ -28,51 +28,116 @@ namespace InmobiliariaAPI
         [HttpGet]
         public async Task<IActionResult> Listar()
         {
-            int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
-            var inmuebles = await context.Inmuebles
-              .Include(o => o.Propietario)
-              .Where(x => x.IdPropietario == idPropietario && x.Estado == true).ToListAsync();
-            return Ok(inmuebles);
+            try
+            {
+                int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+                var propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+                if (propietario == null) return BadRequest("No se encontró el propietario");
+
+                var inmuebles = await context.Inmuebles
+                  .Include(o => o.Propietario)
+                  .Include(o => o.Tipo)
+                  .Where(x => x.IdPropietario == idPropietario && x.Estado == true).ToListAsync();
+
+                return Ok(inmuebles);
+            }
+            catch (DbException e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(503, "Error en la base de datos");
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(500, "Error en el servidor");
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Buscar([FromRoute] int id)
+        {
+            try
+            {
+                int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+                var propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+
+                if (propietario == null) return BadRequest("No se encontró el propietario");
+
+                var inmueble = await context.Inmuebles
+                  .Include(o => o.Propietario)
+                  .Include(o => o.Tipo)
+                  .SingleOrDefaultAsync(x => x.IdInmueble == id && x.Estado == true);
+
+                if (inmueble.IdPropietario != idPropietario) return BadRequest("Solo puede ver sus inmuebles");
+
+                return Ok(inmueble);
+            }
+            catch (DbException e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(503, "Error en la base de datos");
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(500, "Error en el servidor");
+            }
         }
 
         [HttpPatch("disponible/{id}")]
         public async Task<IActionResult> ActualizarDisponible(int id)
         {
 
-            int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
-
-            if (id == 0)
+            try
             {
-                return BadRequest("El id del inmueble es requerido");
+                int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+                var propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+
+                if (propietario == null) return BadRequest("No se encontró el propietario");
+
+                if (id == 0)
+                {
+                    return BadRequest("El id del inmueble es requerido");
+                }
+
+                Inmueble? inmuebleOriginal = await context.Inmuebles
+                  .SingleOrDefaultAsync(x => x.IdInmueble == id && x.IdPropietario == idPropietario && x.Estado == true);
+
+
+                if (inmuebleOriginal == null)
+                {
+                    return NotFound("No se encontró el inmueble");
+                }
+                inmuebleOriginal.Disponible = !inmuebleOriginal.Disponible;
+                await context.SaveChangesAsync();
+
+                return Ok(inmuebleOriginal);
             }
-            else if (id != idPropietario)
+            catch (DbException e)
             {
-                return StatusCode(403, "No puede editar el inmueble de otro propietario");
+                Console.WriteLine(e.Message);
+                return StatusCode(503, "Error en la base de datos");
             }
-
-            Inmueble? inmuebleOriginal = await context.Inmuebles
-              .SingleOrDefaultAsync(x => x.IdInmueble == id && x.IdPropietario == idPropietario);
-
-
-            if (inmuebleOriginal == null)
+            catch (System.Exception e)
             {
-                return NotFound("No se encontró el inmueble");
+                Console.WriteLine(e.Message);
+                return StatusCode(500, "Error en el servidor");
             }
-            inmuebleOriginal.Disponible = !inmuebleOriginal.Disponible;
-            await context.SaveChangesAsync();
-
-            return Ok(inmuebleOriginal);
         }
         [HttpPost]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Crear([FromForm] InmuebleImagenRequest inmuebleRequest)
         {
-            int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
-            Inmueble inmueble = new Inmueble(inmuebleRequest, idPropietario);
-            IFormFile imagen = inmuebleRequest.Imagen;
-
             try
             {
+                int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+
+                if (inmuebleRequest.IdPropietario != idPropietario)
+                    return BadRequest("El propietario del inmueble es diferente al de la sesión");
+
+                Inmueble inmueble = new Inmueble(inmuebleRequest);
+                IFormFile imagen = inmuebleRequest.Imagen;
+
                 await context.Inmuebles.AddAsync(inmueble);
                 await context.SaveChangesAsync();
                 if (imagen == null)
@@ -95,10 +160,15 @@ namespace InmobiliariaAPI
                 await context.SaveChangesAsync();
                 return Created();
             }
-            catch (Exception e)
+            catch (DbException e)
             {
-                Console.WriteLine(e);
-                return StatusCode(500, "Error al guardar");
+                Console.WriteLine(e.Message);
+                return StatusCode(503, "Error en la base de datos");
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(500, "Error en el servidor");
             }
         }
         [HttpGet("contrato-vigente")]
@@ -114,13 +184,8 @@ namespace InmobiliariaAPI
                   .Include(o => o.Inmueble)
                   .ThenInclude(o => o.Tipo)
                   .Where(x => x.Inmueble.IdPropietario == idPropietario && x.FechaDesde < x.FechaHasta && x.FechaHasta > DateOnly.FromDateTime(DateTime.Now))
-    .Select(x => x.Inmueble).ToListAsync();
+                  .Select(x => x.Inmueble).ToListAsync();
                 return Ok(inmuebles);
-            }
-            catch (MySqlException e)
-            {
-                Console.WriteLine(e.Message);
-                return StatusCode(503, "Error en la base de datos");
             }
             catch (DbException e)
             {

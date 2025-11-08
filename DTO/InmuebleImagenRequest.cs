@@ -17,6 +17,9 @@ namespace InmobiliariaAPI.DTO
         public int? Ambientes { get; set; }
 
         [Required]
+        public int? IdPropietario { get; set; }
+
+        [Required]
         public int? Superficie { get; set; }
 
         [Required]

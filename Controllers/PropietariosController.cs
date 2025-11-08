@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Data.Common;
 
 namespace InmobiliariaAPI
 {
@@ -26,56 +27,96 @@ namespace InmobiliariaAPI
         [HttpGet]
         public async Task<IActionResult> Perfil()
         {
-            int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
-            var propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
-            if (propietario == null) return NotFound("No se encontró el propietario");
-            return Ok(propietario);
+            try
+            {
+                int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+                var propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+                if (propietario == null) return NotFound("No se encontró el propietario");
+                return Ok(propietario);
+            }
+            catch (DbException e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(503, "Error en la base de datos");
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(500, "Error en el servidor");
+            }
         }
 
         [HttpPut]
         public async Task<IActionResult> Actualizar([FromBody] Propietario propietario)
         {
-            int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
-
-            if (propietario.IdPropietario != idPropietario)
-                return StatusCode(403, "Solo puede editar su perfil");
-
-            var propietarioOriginal = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
-            if (propietarioOriginal == null) return BadRequest("No se encontró el propietario");
-            if (propietario.Clave == null)
+            try
             {
-                propietario.Clave = propietarioOriginal.Clave;
-            }
-            else
-            {
+                int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
 
-                string hashed = HashService.HashClave(configuration["Salt"] ?? "", propietario.Clave);
-                propietario.Clave = hashed;
+                if (propietario.IdPropietario != idPropietario)
+                    return StatusCode(403, "Solo puede editar su perfil");
+
+                var propietarioOriginal = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+                if (propietarioOriginal == null) return BadRequest("No se encontró el propietario");
+                if (propietario.Clave == null)
+                {
+                    propietario.Clave = propietarioOriginal.Clave;
+                }
+                else
+                {
+
+                    string hashed = HashService.HashClave(configuration["Salt"] ?? "", propietario.Clave);
+                    propietario.Clave = hashed;
+                }
+                context.Entry(propietarioOriginal).CurrentValues.SetValues(propietario);
+                context.SaveChanges();
+                return Ok(propietario);
             }
-            context.Entry(propietarioOriginal).CurrentValues.SetValues(propietario);
-            context.SaveChanges();
-            return Ok(propietario);
+            catch (DbException e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(503, "Error en la base de datos");
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(500, "Error en el servidor");
+            }
         }
 
         [HttpPatch("clave")]
-        [AllowAnonymous]
         public async Task<IActionResult> CambiarClave([FromForm] CambiarClaveRequest cambiarClave)
         {
 
-            int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
-            string nuevaHashed = HashService.HashClave(configuration["Salt"] ?? "", cambiarClave.Nueva);
-            string viejaHashed = HashService.HashClave(configuration["Salt"] ?? "", cambiarClave.Actual);
+            try
+            {
+                int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+                var propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
 
-            Propietario? propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+                if (propietario == null) return BadRequest("No se encontró el propietario");
 
-            if (propietario == null) return NotFound("No se encontró el propietario");
+                string nuevaHashed = HashService.HashClave(configuration["Salt"] ?? "", cambiarClave.Nueva);
+                string viejaHashed = HashService.HashClave(configuration["Salt"] ?? "", cambiarClave.Actual);
 
-            if (viejaHashed != propietario.Clave) return BadRequest("Clave actual incorrecta");
-            propietario.Clave = nuevaHashed;
+                if (propietario == null) return NotFound("No se encontró el propietario");
 
-            await context.SaveChangesAsync();
+                if (viejaHashed != propietario.Clave) return BadRequest("Clave actual incorrecta");
+                propietario.Clave = nuevaHashed;
 
-            return Ok();
+                await context.SaveChangesAsync();
+
+                return Ok();
+            }
+            catch (DbException e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(503, "Error en la base de datos");
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(500, "Error en el servidor");
+            }
         }
         [HttpPost("login")]
         [AllowAnonymous]
@@ -84,8 +125,9 @@ namespace InmobiliariaAPI
             try
             {
                 string hashed = HashService.HashClave(configuration["Salt"] ?? "", login.Clave);
-                var p = await context.Propietarios.FirstOrDefaultAsync(x => x.Email == login.Usuario && x.Estado == true);
-                if (p == null || p.Clave != hashed)
+                var propietario = await context.Propietarios.FirstOrDefaultAsync(x => x.Email == login.Usuario && x.Estado == true);
+                if (propietario == null) return BadRequest("No se encontró el propietario");
+                if (propietario == null || propietario.Clave != hashed)
                 {
                     return BadRequest("Nombre de usuario o clave incorrecta");
                 }
@@ -98,8 +140,8 @@ namespace InmobiliariaAPI
                     var credenciales = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
                     var claims = new List<Claim>
                     {
-                        new Claim(ClaimTypes.Name, p.IdPropietario.ToString()),
-                        new Claim("FullName", p.Nombre + " " + p.Apellido),
+                        new Claim(ClaimTypes.Name, propietario.IdPropietario.ToString()),
+                        new Claim("FullName", propietario.Nombre + " " + propietario.Apellido),
                         new Claim(ClaimTypes.Role, "Propietario"),
                     };
 
@@ -113,9 +155,15 @@ namespace InmobiliariaAPI
                     return Ok(new JwtSecurityTokenHandler().WriteToken(token));
                 }
             }
-            catch (Exception ex)
+            catch (DbException e)
             {
-                return BadRequest(ex.Message);
+                Console.WriteLine(e.Message);
+                return StatusCode(503, "Error en la base de datos");
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return StatusCode(500, "Error en el servidor");
             }
         }
     }
