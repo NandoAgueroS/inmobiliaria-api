@@ -188,7 +188,7 @@ namespace InmobiliariaAPI
                   .ThenInclude(o => o.Propietario)
                   .Include(o => o.Inmueble)
                   .ThenInclude(o => o.Tipo)
-                  .Where(x => x.FechaDesde <= hoy && (x.FechaHasta >= hoy && x.FechaAnulado == null) || (x.FechaAnulado != null && x.FechaAnulado >= hoy))
+                  .Where(x => x.Inmueble.IdPropietario == idPropietario && x.FechaDesde <= hoy && (x.FechaHasta >= hoy && x.FechaAnulado == null) || (x.FechaAnulado != null && x.FechaAnulado >= hoy))
                   .Select(x => x.Inmueble).ToListAsync();
 
                 return Ok(inmuebles);
