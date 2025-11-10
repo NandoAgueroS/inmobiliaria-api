@@ -143,8 +143,6 @@ namespace InmobiliariaAPI
 
                 await context.Inmuebles.AddAsync(inmueble);
                 await context.SaveChangesAsync();
-                if (imagen == null)
-                    return BadRequest();
 
                 string wwwPath = webEnv.WebRootPath;
                 string path = Path.Combine(wwwPath, "Uploads");
