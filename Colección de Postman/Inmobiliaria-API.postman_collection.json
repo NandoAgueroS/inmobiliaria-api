@@ -1,0 +1,401 @@
+{
+	"info": {
+		"_postman_id": "81b705c0-98bb-4126-a173-81b743004855",
+		"name": "Inmobiliaria-API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "36823113"
+	},
+	"item": [
+		{
+			"name": "Propietarios",
+			"item": [
+				{
+					"name": "Ver perfil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "",
+								"value": "",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/Propietarios/perfil",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"Propietarios",
+								"perfil"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "Clave",
+									"value": "123",
+									"type": "text"
+								},
+								{
+									"key": "Usuario",
+									"value": "esteban@gmail.com",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseURL}}/api/Propietarios/login",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"Propietarios",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cambiar clave",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "Actual",
+									"value": "123",
+									"type": "text"
+								},
+								{
+									"key": "Nueva",
+									"value": "123",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseURL}}/api/Propietarios/clave",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"Propietarios",
+								"clave"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar propietario",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "",
+								"value": "",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre\": \"kiwi\",\n    \"apellido\": \"ejemplo\",\n    \"dni\": \"2345243351\",\n    \"telefono\": \"43253451\",\n    \"email\": \"esteban@gmail.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/api/Propietarios/perfil",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"Propietarios",
+								"perfil"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Inmuebles",
+			"item": [
+				{
+					"name": "Inmuebles con contrato vigente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/inmuebles/contrato-vigente",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"inmuebles",
+								"contrato-vigente"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar por id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/inmuebles/139",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"inmuebles",
+								"139"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Inmuebles del propietario",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/inmuebles",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"inmuebles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear inmueble",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "Imagen",
+									"type": "file",
+									"src": "/home/nando/Documentos/tecnicatura/2do_2/lab3/dotnet/doug-bagg-n6fIdqzIwD4-unsplash.jpg"
+								},
+								{
+									"key": "Direccion",
+									"value": "Av inventada",
+									"type": "text"
+								},
+								{
+									"key": "Uso",
+									"value": "Residencial",
+									"type": "text"
+								},
+								{
+									"key": "idTipo",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "Ambientes",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "Valor",
+									"value": "125000.50",
+									"type": "text"
+								},
+								{
+									"key": "Superficie",
+									"value": "48",
+									"type": "text"
+								},
+								{
+									"key": "Longitud",
+									"value": "-60.63932",
+									"type": "text"
+								},
+								{
+									"key": "Latitud",
+									"value": "-32.94682",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseURL}}/api/Inmuebles",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"Inmuebles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Habilitar/Deshabilitar",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/Inmuebles/disponible/124",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"Inmuebles",
+								"disponible",
+								"124"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Contratos",
+			"item": [
+				{
+					"name": "Contratos de inmueble",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/contratos/inmueble/3",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"contratos",
+								"inmueble",
+								"3"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Pagos",
+			"item": [
+				{
+					"name": "Pagos por contrato",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/pagos/contrato/3",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"pagos",
+								"contrato",
+								"3"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": ""
+		},
+		{
+			"key": "token",
+			"value": ""
+		}
+	]
+}
