@@ -11,8 +11,10 @@ namespace InmobiliariaAPI.Models
         [Key]
         public int? IdInmueble { get; set; }
 
+        [MaxLength(250)]
         public string Direccion { get; set; }
 
+        [MaxLength(11)]
         public string Uso { get; set; }
 
         public int IdTipo { get; set; }
@@ -20,8 +22,6 @@ namespace InmobiliariaAPI.Models
         [ForeignKey("IdTipo")]
         public Tipo? Tipo { get; set; }
 
-        [ForeignKey("hola")]
-        public int idInventado { get; set; }
         public int Ambientes { get; set; }
 
         public int Superficie { get; set; }
@@ -45,7 +45,7 @@ namespace InmobiliariaAPI.Models
 
         public Inmueble() { }
 
-        public Inmueble(InmuebleImagenRequest inmuebleImagenRequest)
+        public Inmueble(InmuebleImagenRequest inmuebleImagenRequest, int idPropietario)
         {
 
             Direccion = inmuebleImagenRequest.Direccion;
@@ -56,7 +56,7 @@ namespace InmobiliariaAPI.Models
             Valor = inmuebleImagenRequest.Valor.Value;
             Latitud = inmuebleImagenRequest.Latitud.Value;
             Longitud = inmuebleImagenRequest.Longitud.Value;
-            IdPropietario = inmuebleImagenRequest.IdPropietario.Value;
+            IdPropietario = idPropietario;
         }
     }
 }

@@ -18,20 +18,24 @@ namespace InmobiliariaAPI
     {
         private readonly DataContext context;
         private readonly IConfiguration configuration;
+
         public PropietariosController(DataContext context, IConfiguration configuration)
         {
             this.context = context;
             this.configuration = configuration;
         }
 
-        [HttpGet]
+        [HttpGet("perfil")]
         public async Task<IActionResult> Perfil()
         {
             try
             {
                 int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+
                 var propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
+
                 if (propietario == null) return NotFound("No se encontró el propietario");
+
                 return Ok(propietario);
             }
             catch (DbException e)
@@ -46,31 +50,25 @@ namespace InmobiliariaAPI
             }
         }
 
-        [HttpPut]
-        public async Task<IActionResult> Actualizar([FromBody] Propietario propietario)
+        [HttpPut("perfil")]
+        public async Task<IActionResult> Actualizar([FromBody] ActualizarPropietarioRequest actualizarPropietario)
         {
             try
             {
                 int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
 
-                if (propietario.IdPropietario != idPropietario)
-                    return StatusCode(403, "Solo puede editar su perfil");
-
                 var propietarioOriginal = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
-                if (propietarioOriginal == null) return BadRequest("No se encontró el propietario");
-                if (propietario.Clave == null)
-                {
-                    propietario.Clave = propietarioOriginal.Clave;
-                }
-                else
-                {
 
-                    string hashed = HashService.HashClave(configuration["Salt"] ?? "", propietario.Clave);
-                    propietario.Clave = hashed;
-                }
-                context.Entry(propietarioOriginal).CurrentValues.SetValues(propietario);
+                if (propietarioOriginal == null) return BadRequest("No se encontró el propietario");
+
+                propietarioOriginal.Nombre = actualizarPropietario.Nombre;
+                propietarioOriginal.Apellido = actualizarPropietario.Apellido;
+                propietarioOriginal.Dni = actualizarPropietario.Dni;
+                propietarioOriginal.Email = actualizarPropietario.Email;
+                propietarioOriginal.Telefono = actualizarPropietario.Telefono;
+
                 context.SaveChanges();
-                return Ok(propietario);
+                return Ok(propietarioOriginal);
             }
             catch (DbException e)
             {
@@ -118,6 +116,7 @@ namespace InmobiliariaAPI
                 return StatusCode(500, "Error en el servidor");
             }
         }
+
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromForm] LoginRequest login)
@@ -125,33 +124,18 @@ namespace InmobiliariaAPI
             try
             {
                 string hashed = HashService.HashClave(configuration["Salt"] ?? "", login.Clave);
+
                 var propietario = await context.Propietarios.FirstOrDefaultAsync(x => x.Email == login.Usuario && x.Estado == true);
+
                 if (propietario == null) return BadRequest("No se encontró el propietario");
+
                 if (propietario == null || propietario.Clave != hashed)
                 {
                     return BadRequest("Nombre de usuario o clave incorrecta");
                 }
                 else
                 {
-                    var secreto = configuration["TokenAuthentication:SecretKey"];
-                    if (string.IsNullOrEmpty(secreto))
-                        throw new Exception("Falta configurar TokenAuthentication:Secret");
-                    var key = new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secreto));
-                    var credenciales = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-                    var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.Name, propietario.IdPropietario.ToString()),
-                        new Claim("FullName", propietario.Nombre + " " + propietario.Apellido),
-                        new Claim(ClaimTypes.Role, "Propietario"),
-                    };
-
-                    var token = new JwtSecurityToken(
-                        issuer: configuration["TokenAuthentication:Issuer"],
-                        audience: configuration["TokenAuthentication:Audience"],
-                        claims: claims,
-                        expires: DateTime.Now.AddMinutes(60),
-                        signingCredentials: credenciales
-                    );
+                    JwtSecurityToken token = TokenService.CrearToken(configuration, propietario);
                     return Ok(new JwtSecurityTokenHandler().WriteToken(token));
                 }
             }

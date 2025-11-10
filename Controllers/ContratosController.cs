@@ -18,7 +18,7 @@ namespace InmobiliariaAPI.Controllers
         }
 
         [HttpGet("inmueble/{idInmueble}")]
-        public async Task<IActionResult> ListarPorInmueble([FromRoute] int idInmueble, [FromQuery] bool? vigentes)
+        public async Task<IActionResult> ListarPorInmueble([FromRoute] int idInmueble)
         {
 
             try
@@ -27,20 +27,15 @@ namespace InmobiliariaAPI.Controllers
                 var propietario = await context.Propietarios.SingleOrDefaultAsync(x => x.IdPropietario == idPropietario && x.Estado == true);
 
                 if (propietario == null) return BadRequest("No se encontró el propietario");
+
                 DateOnly hoy = DateOnly.FromDateTime(DateTime.Now);
-                var contratosQuery = context.Contratos
+
+                var contratos = await context.Contratos
                   .Include(o => o.Inmueble)
                   .ThenInclude(o => o.Propietario)
                   .Include(o => o.Inquilino)
-                  .Where(x => x.Inmueble.IdPropietario == idPropietario && x.Inmueble.IdInmueble == idInmueble && x.Estado == true);
-                if (vigentes != null)
-                {
-                    if (vigentes.Value)
-                        contratosQuery = contratosQuery.Where(x => x.FechaDesde <= hoy && (x.FechaHasta >= hoy && x.FechaAnulado == null) || (x.FechaAnulado != null && x.FechaAnulado >= hoy));
-                    else
-                        contratosQuery = contratosQuery.Where(x => x.FechaDesde >= hoy || (x.FechaHasta <= hoy && x.FechaAnulado == null) || (x.FechaAnulado != null && x.FechaAnulado <= hoy));
-                }
-                var contratos = await contratosQuery.ToListAsync();
+                  .Where(x => x.Inmueble.IdPropietario == idPropietario && x.Inmueble.IdInmueble == idInmueble && x.Estado == true).ToListAsync();
+
                 return Ok(contratos);
             }
             catch (DbException e)

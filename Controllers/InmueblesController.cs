@@ -6,7 +6,6 @@ using InmobiliariaAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using MySqlConnector;
 
 namespace InmobiliariaAPI
 {
@@ -18,6 +17,7 @@ namespace InmobiliariaAPI
         private readonly DataContext context;
         private readonly IConfiguration configuration;
         private readonly IWebHostEnvironment webEnv;
+
         public InmueblesController(DataContext context, IConfiguration configuration, IWebHostEnvironment webEnv)
         {
             this.context = context;
@@ -68,6 +68,7 @@ namespace InmobiliariaAPI
                   .Include(o => o.Tipo)
                   .SingleOrDefaultAsync(x => x.IdInmueble == id && x.Estado == true);
 
+                if (inmueble == null) return NotFound("No se encontró el inmueble");
                 if (inmueble.IdPropietario != idPropietario) return BadRequest("Solo puede ver sus inmuebles");
 
                 return Ok(inmueble);
@@ -124,6 +125,7 @@ namespace InmobiliariaAPI
                 return StatusCode(500, "Error en el servidor");
             }
         }
+
         [HttpPost]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Crear([FromForm] InmuebleImagenRequest inmuebleRequest)
@@ -132,10 +134,11 @@ namespace InmobiliariaAPI
             {
                 int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
 
-                if (inmuebleRequest.IdPropietario != idPropietario)
-                    return BadRequest("El propietario del inmueble es diferente al de la sesión");
+                var propietario = context.Propietarios.SingleOrDefault(x => x.IdPropietario == idPropietario && x.Estado == true);
 
-                Inmueble inmueble = new Inmueble(inmuebleRequest);
+                if (propietario == null) return BadRequest("No se encontró el propietario");
+
+                Inmueble inmueble = new Inmueble(inmuebleRequest, idPropietario);
                 IFormFile imagen = inmuebleRequest.Imagen;
 
                 await context.Inmuebles.AddAsync(inmueble);
@@ -158,7 +161,7 @@ namespace InmobiliariaAPI
                 }
 
                 await context.SaveChangesAsync();
-                return Created();
+                return StatusCode(201, inmueble);
             }
             catch (DbException e)
             {
@@ -171,6 +174,7 @@ namespace InmobiliariaAPI
                 return StatusCode(500, "Error en el servidor");
             }
         }
+
         [HttpGet("contrato-vigente")]
         public async Task<IActionResult> GetContratoVigente()
         {
@@ -178,13 +182,17 @@ namespace InmobiliariaAPI
             try
             {
                 int idPropietario = int.Parse(User?.Identity?.Name ?? "0");
+
+                DateOnly hoy = DateOnly.FromDateTime(DateTime.Now);
+
                 var inmuebles = await context.Contratos
                   .Include(o => o.Inmueble)
                   .ThenInclude(o => o.Propietario)
                   .Include(o => o.Inmueble)
                   .ThenInclude(o => o.Tipo)
-                  .Where(x => x.Inmueble.IdPropietario == idPropietario && x.FechaDesde < x.FechaHasta && x.FechaHasta > DateOnly.FromDateTime(DateTime.Now))
+                  .Where(x => x.FechaDesde <= hoy && (x.FechaHasta >= hoy && x.FechaAnulado == null) || (x.FechaAnulado != null && x.FechaAnulado >= hoy))
                   .Select(x => x.Inmueble).ToListAsync();
+
                 return Ok(inmuebles);
             }
             catch (DbException e)
